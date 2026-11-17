@@ -1,0 +1,70 @@
+# Rename this file to ".gitignore" when you copy the kit into 07_repo/
+# (the file is named .txt here so it previews correctly)
+
+# ---------------------------------------------------------------------------
+# Evidence images and containers — NEVER COMMIT
+# Size, and habit. A forensic lab evaluating you is evaluating your habits.
+# ---------------------------------------------------------------------------
+*.dd
+*.raw
+*.E01
+*.e01
+*.Ex01
+*.vmem
+*.vmss
+*.vmsn
+*.vmdk
+*.plaso
+*.7z
+*.zip
+*.evtx
+
+# ---------------------------------------------------------------------------
+# Case working directories — local only
+# ---------------------------------------------------------------------------
+00_case/examiner_notes.md
+02_ground_truth/
+03_evidence/
+04_working/
+
+# ---------------------------------------------------------------------------
+# macOS
+# ---------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# ---------------------------------------------------------------------------
+# Cloud service runtime output — generated during the incident
+# ---------------------------------------------------------------------------
+cloud_service/uploads/
+cloud_service/logs/
+
+# ---------------------------------------------------------------------------
+# Editor / IDE
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+
+# ---------------------------------------------------------------------------
+# Cloud service evidence — wherever the tool is run from
+# The uploads directory holds exfiltrated files; the log holds the transaction
+# record. Both are evidence and must never reach a published repository.
+# ---------------------------------------------------------------------------
+tools/uploads/
+tools/logs/
+tools/cloud_evidence/
+**/uploads/
+**/logs/
+**/cloud_evidence/

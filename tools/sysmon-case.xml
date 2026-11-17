@@ -1,0 +1,140 @@
+<Sysmon schemaversion="4.90">
+  <!-- Revision 2 — 18 Oct 2026. FileCreateTime narrowed to C:\Users\; FileDelete exclusions extended. See below. -->
+  <!--
+    LXL-DFIR-001 — examination-tuned Sysmon configuration
+    Purpose: record exactly the artefact classes this examination relies on,
+             and suppress the noise that would bury them over a 4-day build.
+    Every rule below maps to an investigation question in the dossier.
+
+    NOT a community config. A reviewer may ask "why this rule?" and the
+    answer is in the comment above each one.
+  -->
+  <HashAlgorithms>SHA256</HashAlgorithms>
+  <CheckRevocation/>
+  <EventFiltering>
+
+    <!-- Q3/Q5/Q8 — what ran, when, with what arguments.
+         No exclusions: process execution is the spine of the timeline. -->
+    <RuleGroup name="ProcessCreate" groupRelation="or">
+      <ProcessCreate onmatch="exclude"/>
+    </RuleGroup>
+
+    <RuleGroup name="ProcessTerminate" groupRelation="or">
+      <ProcessTerminate onmatch="exclude"/>
+    </RuleGroup>
+
+    <!-- Q7/Q15 — archive creation and deletion. Windows and Program Files
+         excluded: installer churn would produce thousands of irrelevant hits
+         and drown the user-profile activity that matters. -->
+    <RuleGroup name="FileCreate" groupRelation="or">
+      <FileCreate onmatch="exclude">
+        <TargetFilename condition="begin with">C:\Windows\</TargetFilename>
+        <TargetFilename condition="begin with">C:\Program Files</TargetFilename>
+        <TargetFilename condition="begin with">C:\ProgramData\Microsoft\Windows Defender</TargetFilename>
+        <TargetFilename condition="end with">.tmp</TargetFilename>
+        <TargetFilename condition="end with">.etl</TargetFilename>
+      </FileCreate>
+    </RuleGroup>
+
+    <!-- Q15 — timestomping detection. A file whose creation time is changed
+         AFTER it was created is a concealment indicator.
+
+         v2 (18 Oct 2026): originally logged with no filter. Measurement over
+         two hours of software installation produced 14,081 events — 70% of the
+         entire log — overwhelmingly installer and servicing churn in system
+         directories. At that rate the 512 MB log rolls over in 17 hours.
+
+         Narrowed to the user profiles, because that is where the case data
+         lives. The trade is explicit: a timestomp of a file OUTSIDE
+         C:\Users\ would now be missed by Sysmon, and would have to be found
+         in the filesystem metadata on Day 7 instead. Recorded as a known
+         coverage gap, not a silent omission. -->
+    <RuleGroup name="FileCreateTime" groupRelation="or">
+      <FileCreateTime onmatch="include">
+        <TargetFilename condition="begin with">C:\Users\</TargetFilename>
+      </FileCreateTime>
+    </RuleGroup>
+
+    <!-- Q15 — deletion, including to the recycle bin.
+
+         v2: C:\Windows alone was insufficient — 3,913 events (20% of the log)
+         in two hours, again installer and servicing churn. ProgramData and
+         Program Files added. Case-relevant deletions happen in the user
+         profile and on removable media, both of which are still captured. -->
+    <RuleGroup name="FileDelete" groupRelation="or">
+      <FileDelete onmatch="exclude">
+        <TargetFilename condition="begin with">C:\Windows\</TargetFilename>
+        <TargetFilename condition="begin with">C:\Program Files</TargetFilename>
+        <TargetFilename condition="begin with">C:\ProgramData\</TargetFilename>
+        <TargetFilename condition="begin with">C:\$WinREAgent</TargetFilename>
+        <TargetFilename condition="contains">\Temp\</TargetFilename>
+      </FileDelete>
+    </RuleGroup>
+
+    <!-- Q13 — transmission to an external service. The single most important
+         rule in this config: it records the connection the packet capture
+         will corroborate independently. -->
+    <RuleGroup name="NetworkConnect" groupRelation="or">
+      <NetworkConnect onmatch="exclude">
+        <DestinationIsIpv6>true</DestinationIsIpv6>
+      </NetworkConnect>
+    </RuleGroup>
+
+    <!-- Q13 — name resolution for the simulated provider. -->
+    <RuleGroup name="DnsQuery" groupRelation="or">
+      <DnsQuery onmatch="exclude"/>
+    </RuleGroup>
+
+    <!-- Q1/Q2 — USB device registration is written to these keys, and
+         recorded here as a second, independent source alongside the
+         Windows event logs and the registry hive itself.
+         Q5 — Run keys and RecentDocs capture persistence and recent access. -->
+    <RuleGroup name="RegistryEvent" groupRelation="or">
+      <RegistryEvent onmatch="include">
+        <TargetObject condition="contains">\Enum\USBSTOR</TargetObject>
+        <TargetObject condition="contains">\Enum\USB</TargetObject>
+        <TargetObject condition="contains">\MountedDevices</TargetObject>
+        <TargetObject condition="contains">\CurrentVersion\Run</TargetObject>
+        <TargetObject condition="contains">\Explorer\RecentDocs</TargetObject>
+        <TargetObject condition="contains">\Explorer\TypedPaths</TargetObject>
+        <TargetObject condition="contains">\ShellBags</TargetObject>
+      </RegistryEvent>
+    </RuleGroup>
+
+    <!-- Q15 — downloaded files carry a Zone.Identifier alternate data stream.
+         Recording the hash of that stream shows which files arrived from the
+         network, which is how an exfiltration tool would enter. -->
+    <RuleGroup name="FileCreateStreamHash" groupRelation="or">
+      <FileCreateStreamHash onmatch="exclude">
+        <TargetFilename condition="begin with">C:\Windows\</TargetFilename>
+      </FileCreateStreamHash>
+    </RuleGroup>
+
+    <!-- Q15 — raw disk access. Relevant to concealment and to wiping tools. -->
+    <RuleGroup name="RawAccessRead" groupRelation="or">
+      <RawAccessRead onmatch="exclude"/>
+    </RuleGroup>
+
+    <!-- Credential-access indicators. INCLUDE, not exclude — we want access
+         to lsass and unresolvable call traces recorded, everything else dropped.
+         An exclude rule here would have done the exact opposite, which is the
+         kind of inversion that silently empties a log. -->
+    <RuleGroup name="ProcessAccess" groupRelation="or">
+      <ProcessAccess onmatch="include">
+        <TargetImage condition="is">C:\Windows\System32\lsass.exe</TargetImage>
+        <CallTrace condition="contains">UNKNOWN</CallTrace>
+      </ProcessAccess>
+    </RuleGroup>
+
+    <RuleGroup name="CreateRemoteThread" groupRelation="or">
+      <CreateRemoteThread onmatch="exclude"/>
+    </RuleGroup>
+
+    <!-- Deliberately NOT enabled:
+         ImageLoad        — thousands of events per hour, no case value here
+         ClipboardChange  — noisy, and the scenario does not model clipboard exfil
+         DriverLoad       — the ARM64 platform has no third-party drivers in scope
+    -->
+
+  </EventFiltering>
+</Sysmon>

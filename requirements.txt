@@ -1,0 +1,8 @@
+# Python dependencies for the tooling in tools/ and cloud_service/.
+# Case evidence and the examination environment are not distributed.
+
+python-evtx==0.8.1
+py7zr==1.1.4
+regipy
+pytsk3
+Flask
