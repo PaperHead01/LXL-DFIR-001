@@ -100,7 +100,7 @@ wrong.
 | **Timeline** | [`findings/timeline_30oct.csv`](findings/) — 27 rows, IST and UTC, with precision and source per row |
 | **Evidence register** | [`methodology/evidence_register.md`](methodology/) — exhibits, per-file hashes, retired numbers |
 | **Tools** | [`tools/`](tools/) — the two parsers I wrote, with their validation notes |
-| **The cloud service** | [`cloud_service/`](cloud_service/) — a simulated third-party service; the subject's exfiltration target |
+| **The simulated environment** | [`cloud_service/`](cloud_service/) — the third-party service the subject exfiltrates to. [`tools/smtp_sink.py`](tools/) and [`tools/minimal_imap.py`](tools/) — the mail server that receives the message and the client used to verify delivery |
 | **Diagrams** | [`diagrams/`](diagrams/) — five figures, PIL-generated, literal text only |
 | **Build log** | [`BUILD_LOG.md`](BUILD_LOG.md) — daily, including what broke |
 
@@ -158,7 +158,7 @@ the measurement of its own accuracy, the parsers, and the service that generated
 the cloud record.
 
 ```bash
-git clone https://github.com/<you>/LXL-DFIR-001
+git clone https://github.com/PaperHead01/LXL-DFIR-001
 cd LXL-DFIR-001
 pip install -r requirements.txt
 ```
@@ -166,6 +166,6 @@ pip install -r requirements.txt
 ---
 
 **Examiner:** Aditya Pandey
-**Contact:** [LinkedIn](https://www.linkedin.com/in/)
+**GitHub:** [PaperHead01](https://github.com/PaperHead01)
 
 `SIMULATED / ACADEMIC CASE — NOT FOR LEGAL USE`
