@@ -128,8 +128,10 @@ counsel determines what must be filed.
 
 Numbers E-005, E-006 and E-007 were allocated and retired without acquisition;
 **no directory exists for them**, because an empty directory cannot be
-distinguished from a lost exhibit. E-009 (browser profile) and E-011 (Windows
-artefacts) were reserved prospectively.
+distinguished from a lost exhibit. E-009 (browser profile) remains **reserved and
+unallocated** — the 22–23 October browsing window it was reserved for has not been
+acquired. E-011 was reserved prospectively and **has since been acquired**; its
+per-file hashes are in the manifest.
 
 ### 3.2 Acquisition methods
 
@@ -356,6 +358,51 @@ role gave legitimate access to `01_Projects` and `02_Shared`.** Every file opene
 came from the two folders carrying a classification marking, and **no file was
 opened from either folder the role required.**
 
+#### 6.3.1 Folder navigation recovered from ShellBags
+
+A fourth, independent record of file access was recovered from the user's
+`UsrClass.dat` ShellBag keys (`BagMRU`). **It records folder names and the time each
+folder record was last written — something neither the change journal nor the
+endpoint sensor records.**
+
+| Folder node | Record last written (IST) | Child entries recorded in that node |
+|---|---|---|
+| `This PC` | **30 Oct 16:56:26** | `C:\`, `E:\` |
+| `C:\` | **30 Oct 16:32:53** | `Tools`, **`Asterion`**, `Windows` |
+| `C:\Asterion` | **30 Oct 16:41:22** | `01_Projects`, `02_Shared`, **`03_Confidential`**, **`04_Restricted`** |
+| `C:\Asterion\01_Projects` … `04_Restricted` | 21 Oct 18:43–18:44 | *(individual entries)* |
+| user `Documents` | **30 Oct 16:41:11** | **`Backup`** |
+| `Documents\Backup` | **30 Oct 16:54:41** | **`Atlas_backup.7z`** |
+| `E:\` | **30 Oct 16:56:26** | *(removable volume)* |
+
+**Each of these lands beside an event already established from other artefacts:**
+
+| ShellBag record written | Nearest established event | Difference |
+|---|---|---|
+| `C:\` shows `Asterion` | interactive logon 16:32:38 | +15 s |
+| `C:\Asterion` | first staged copy 16:41:13.006 | **−1.6 s** |
+| `Documents` shows `Backup` | staging folder created 16:40:15.490 | +56 s |
+| `Documents\Backup` shows `Atlas_backup.7z` | archive created 16:48:47.643 | +6 min |
+| **`E:\`** | first copy to removable media 16:56:28.595 | **−2.6 s** |
+| root `BagMRU` | `POST /upload` 17:03:41.119 | **−12.3 s** |
+
+**Two limitations, stated rather than glossed:**
+
+1. **A ShellBag key's last-write time is when that key was last modified — not a
+   visit log.** It establishes that a folder appeared in Explorer and when that
+   record last changed. **It does not establish how many times the folder was
+   opened**, and no visit count is asserted here.
+2. **`C:\Asterion` carries a 30 October time, but the four folders beneath it carry
+   21 October.** ShellBags therefore evidence the *Asterion* folder being opened on
+   30 October; they do **not** by themselves evidence descending into the individual
+   classification folders that day. **The individual file opens are evidenced by
+   shell items and jump lists above, not by these keys.**
+
+**Value.** This is the fourth independent source for the file-access finding, and
+the only one that records **folder names as typed by the filesystem**. The `E:\`
+record additionally corroborates the operator being in the removable volume's folder
+**2.6 seconds before** the first file was written to it.
+
 ### 6.4 Q4 — Consistency with the established working pattern
 
 **Finding.** The access pattern on 30 October **is not consistent with the pattern
@@ -581,8 +628,25 @@ recorded storing **8,296 bytes** with SHA-256 `9c75f0db…037074b`.
 |---|---|---|
 | Packet capture, frame 159 | 17:03:41.119 | `POST /upload`, `Content-Length` **8,529**, response **200** |
 | Service access log | 17:03:41.138 | `bytes_in` **8,529**, `bytes_stored` **8,296**, `status` 200 |
-| Service-stored hash | — | `9c75f0db…037074b` |
+| **Service's stored copy, hashed directly** | — | **`9c75f0db…037074b`** |
 | USB image, `icat` inode 17 | 16:56:28 (FAT) | `9c75f0db…037074b` |
+
+**The third row is what makes this finding stand without inference.** The service's
+own copy of the uploaded file is retained in exhibit E-008 and was hashed by the
+examiner directly, rather than accepted from the service's logged assertion.
+
+**The triangle, all three legs hashed by the examiner from three separate exhibits:**
+
+| Object | Exhibit | Method | SHA-256 |
+|---|---|---|---|
+| Original on the workstation | E-001 | `icat`, inode **123858** | `9c75f0db…037074b` |
+| Copy on the removable device | E-002 | `icat`, inode **17** | `9c75f0db…037074b` |
+| Copy retained by the service | E-008 | `shasum`, direct | `9c75f0db…037074b` |
+
+**No service assertion, no inference, no single point of failure.** Three independent
+extractions of three separate physical objects produced the same 8,296 bytes. The
+cloud service's logged hash agrees with all three, but **the finding does not depend
+on that agreement** — which is the difference between evidence and corroboration.
 
 **The 233-byte difference between 8,529 and 8,296 is the multipart envelope** —
 boundaries and part headers — and is itself evidence that a file was carried inside
@@ -669,7 +733,45 @@ housekeeping from concealment**. Three points bear on it and none is conclusive:
    would not do.
 
 **Point 3 is the strongest argument against concealment**, and it is stated for that
-reason. The concealment finding is assessed **MEDIUM** confidence.
+reason.
+
+**Point 4 — and it cuts the other way.** The browsing record of the external service
+has been removed from the browser profile *entirely*: `moz_places` contains no entry
+for the service at all, not merely a missing visit row (§6.15.1). **Deleting a
+history entry is a routine menu action. Removing the place row as well is not what
+the interface offers.** That asymmetry is recorded against the counter-hypothesis of
+routine housekeeping.
+
+**The concealment finding is therefore assessed MEDIUM-HIGH**, raised from MEDIUM on
+the strength of §6.15.1.
+
+#### 6.15.1 The browser profile holds no record of the external service
+
+| Source | Records Firefox accessing the service |
+|---|---|
+| Packet capture, frames 108–175 | `Firefox/158.0` — 22 Oct, 23 Oct, 30 Oct |
+| Service access log `access.jsonl` | same user agent, three dates |
+| Sysmon process records | `firefox.exe` launched 17:02:19.493 |
+| **`places.sqlite` `moz_places`** | **nothing. No row for `172.16.167.1:8080`.** |
+
+**All 23 surviving history visits are dated 21 October 18:23–18:59** — the VM build.
+The profile records the internal case-data server on port 8000 and says nothing
+whatsoever about the external service on port 8080.
+
+**Two supporting facts, each independently established:**
+
+- **The write-ahead log is zero bytes**, so the database had been checkpointed and
+  closed cleanly — **there are no unmerged writes hiding the records.**
+- **The file contains 3.5 MB beyond its logical page count, and that region is
+  entirely null** — so the records are not recoverable from unused space either.
+  Tested, not assumed: no occurrence of `8080`, `nimbusshare` or `atlas_backup`
+  appears anywhere in the raw file.
+
+**The time of the clearing is not recoverable and is not stated.**
+
+**Consequence for the case, stated plainly:** the browser can no longer corroborate
+the upload. **That finding rests on the packet capture and the service's log**, which
+is precisely why the three-way hash equality in §6.13 carries the weight it does.
 
 **A limit of this examination.** Sysmon event ID 26 (file delete, recording the
 deleting *process*) is **not enabled** in this workstation's configuration. Its
@@ -714,12 +816,15 @@ fully realised.
 | # | Proposition | Status | Basis |
 |---|---|---|---|
 | 1 | Four identified files were opened on AST-WKS-0471 on 30 Oct 2026, 16:35–16:39 | **FACT** | Shell items, jump lists, `$MFT` |
+| 1a | The folders `C:\Asterion`, `Documents\Backup` and `E:\` were navigated in Explorer on 30 Oct 2026, the last within 2.6 s of the first copy | **FACT** | ShellBags (`BagMRU`), §6.3.1 |
 | 2 | A folder `Documents\Backup` was created at 16:40:15.490 and four files copied into it | **FACT** | `$UsnJrnl`, Sysmon 11 |
 | 3 | A password-protected archive was created at 16:48:47.643 containing exactly those four files | **FACT** | Sysmon 1, decryption, 4/4 hash match |
 | 4 | Three items were copied to the USB device at 16:56:28–16:56:52 | **FACT** | Sysmon 11, FAT timestamps, hashes |
 | 5 | The USB copy of the archive is byte-identical to the file uploaded to the cloud service | **FACT** | SHA-256 equality |
 | 6 | A 424-byte message with no attachment was sent to `s.varma@novaedge.example` at 17:01:01 | **FACT** | Three records, incl. full SMTP dialogue |
 | 7 | The staging folder was deleted at 17:06:37.579 | **FACT** | `$UsnJrnl` + Sysmon, to the ms |
+| 7a | **No record of the external service survives in the browser profile** — no place row, no visit row — although four other records show Firefox accessing it | **FACT** | `moz_places` + PCAP + `access.jsonl`, §6.15 |
+| 7b | The session **ended by logoff at 17:13:32**, it did not lock — no `4800` exists in the window | **FACT** | Security 4647 + Sysmon reboot, §6.16 |
 | 8 | Corporate data left the workstation by two routes | **FACT** | Items 4, 5 and 6 together |
 | 9 | The email was a notification for the upload rather than a delivery | **INFERENCE — MEDIUM** | Timing, absence of attachment, subject line |
 | 10 | The selection of files was deliberate rather than incidental | **INFERENCE — MEDIUM** | Selectivity at two levels; no counter-evidence |
@@ -806,7 +911,7 @@ resolved by preference** (§7.4). The full table of 27 rows is at
 | 17:09:08–17:09:10 | 11:39:08–11:39:10 | 10 connection attempts to :8000, all refused | PCAP |
 | ~17:09:11 | ~11:39:11 | Firefox history partially cleared | browser |
 | 17:10:35 | 11:40:35 | Device removed | registry |
-| ~17:12 | ~11:42 | Session locked | Security |
+| 17:13:32 | 11:43:32 | **Session ended — user logoff (`4647`); no `4800`, so it did not lock** | Security |
 | 17:12 | 11:42 | Capture stopped, 218 packets, 0 dropped | `capinfos` |
 
 ### 7.3 The correlation chains, drawn explicitly
@@ -815,6 +920,9 @@ resolved by preference** (§7.4). The full table of 27 rows is at
 
 ```
 Shell items        → four documents opened 16:35–16:39          FACT
+ShellBags          → C:\Asterion opened 16:41:22                 FACT
+ShellBags          → Documents\Backup held Atlas_backup.7z 16:54:41  FACT
+ShellBags          → E:\ navigated 16:56:26                     FACT
 $UsnJrnl           → staging folder created 16:40:15.490        FACT
 Sysmon 11 ×4       → four files copied 16:41:13–16:42:14        FACT
 Sysmon 1           → 7z archive created 16:48:47.643            FACT
@@ -936,6 +1044,7 @@ content that was never written to a named file is not examined here.**
 | `python-evtx` | non-ISO timestamp format | all log timings | none — normalised and cross-checked |
 | Sysmon config | EID 26 not enabled | §6.15 | deleting *process* not recorded; event itself proven |
 | FAT32 | 2 s, local time | §6.9–6.10 | resolved by corroboration |
+| `regipy` 6.5.0 | does not decode shell items to paths; returns hex, needs manual extraction | §6.3.1 | folder names recovered as fragments; **two paths not decoded** |
 
 ### 9.5 Simulation artefacts
 
